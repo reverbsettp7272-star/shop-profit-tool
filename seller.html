@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>电商 ROI 计算器｜商家发码</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;padding:26px 16px;background:linear-gradient(145deg,#e8f3ff,#f8fbff 56%,#eef7ff);color:#173453;font-family:"Microsoft YaHei",system-ui,sans-serif}.wrap{width:min(620px,100%);margin:0 auto}.brand{display:flex;align-items:center;gap:14px;margin-bottom:22px}.mark{display:grid;place-items:center;width:55px;height:55px;border-radius:17px;background:linear-gradient(135deg,#0d579f,#258fe3);color:#fff;font-weight:900;box-shadow:0 12px 28px rgba(28,102,174,.22)}h1{margin:0;font-size:26px}.subtitle{margin:5px 0 0;color:#71849a;font-size:14px}.card{padding:25px;border:1px solid #d5e5f3;border-radius:24px;background:#fff;box-shadow:0 18px 50px rgba(42,92,139,.11)}label{display:block;margin-top:18px;color:#496885;font-size:14px;font-weight:800}label:first-child{margin-top:0}input{width:100%;height:48px;margin-top:8px;padding:0 14px;border:1px solid #bdd4e8;border-radius:13px;background:#fbfdff;color:#173453;font-size:16px;outline:none}input:focus{border-color:#258fe3;box-shadow:0 0 0 3px rgba(37,143,227,.12)}button{width:100%;height:50px;margin-top:22px;border:0;border-radius:13px;background:linear-gradient(110deg,#1676d2,#258fe3);color:#fff;font-size:17px;font-weight:900;cursor:pointer}.result{display:none;margin-top:20px;padding:18px;border:1px solid #b8dfd1;border-radius:16px;background:#ecfaf4;text-align:center}.result.show{display:block}.result small{display:block;color:#4d7769}.code{display:block;margin:10px 0;color:#087252;font-family:Consolas,monospace;font-size:24px;font-weight:900;letter-spacing:1px;word-break:break-all}.copy{width:auto;height:38px;margin:0;padding:0 18px;background:#087252;font-size:14px}.status{min-height:24px;margin:15px 0 0;color:#72869c;font-size:14px;line-height:1.6;text-align:center}.note{margin-top:18px;padding:16px;border-radius:15px;background:#f3f7fb;color:#64798f;font-size:13px;line-height:1.8}.note strong{color:#285b8b}.back{display:inline-block;margin-top:18px;color:#1769bc;text-decoration:none;font-size:14px}@media(max-width:520px){body{padding-top:18px}.card{padding:20px}h1{font-size:22px}.code{font-size:20px}}
+  </style>
+  <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.27.1/cloudbase.full.js"></script>
+  <script src="./cloudbase-bridge.js"></script>
+</head>
+<body>
+  <main class="wrap">
+    <div class="brand">
+      <div class="mark">ROI</div>
+      <div><h1>商家订单发码</h1><p class="subtitle">买家付款后，为该订单生成一次性开通码</p></div>
+    </div>
+    <section class="card">
+      <label>商家发码密钥
+        <input id="key" type="password" autocomplete="off" placeholder="输入后台配置的商家密钥">
+      </label>
+      <label>抖音订单号
+        <input id="order" autocomplete="off" placeholder="粘贴已付款订单号">
+      </label>
+      <button id="issue" type="button">生成买家开通码</button>
+      <div id="result" class="result">
+        <small>把下面的开通码发给该订单买家</small>
+        <span id="code" class="code"></span>
+        <button id="copy" class="copy" type="button">复制开通码</button>
+      </div>
+      <p id="status" class="status"></p>
+      <div class="note"><strong>操作说明：</strong>同一个订单号只能生成一次。买家用开通码创建账号后，便可用同一账号登录网页版和微信小程序。请勿把商家密钥发给买家。</div>
+    </section>
+    <a class="back" href="/">← 返回消费者登录页</a>
+  </main>
+  <script>
+    const keyInput = document.querySelector("#key");
+    const orderInput = document.querySelector("#order");
+    const issueButton = document.querySelector("#issue");
+    const resultBox = document.querySelector("#result");
+    const codeBox = document.querySelector("#code");
+    const copyButton = document.querySelector("#copy");
+    const statusBox = document.querySelector("#status");
+    keyInput.value = sessionStorage.getItem("roiSellerKey") || "";
+    issueButton.addEventListener("click", async () => {
+      const key = keyInput.value.trim();
+      const orderReference = orderInput.value.trim();
+      resultBox.classList.remove("show");
+      statusBox.textContent = "";
+      if (!key || orderReference.length < 4) {
+        statusBox.textContent = "请先填写商家密钥和有效订单号。";
+        return;
+      }
+      issueButton.disabled = true;
+      issueButton.textContent = "正在生成…";
+      sessionStorage.setItem("roiSellerKey", key);
+      try {
+        const data = await window.roiCloudRequest("sellerIssue", { sellerKey: key, orderReference });
+        codeBox.textContent = data.code;
+        resultBox.classList.add("show");
+        statusBox.textContent = "开通码已生成，请发送给对应订单买家。";
+      } catch (error) {
+        statusBox.textContent = error.message || "生成失败，请稍后重试。";
+      } finally {
+        issueButton.disabled = false;
+        issueButton.textContent = "生成买家开通码";
+      }
+    });
+    copyButton.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(codeBox.textContent);
+        copyButton.textContent = "已复制";
+        setTimeout(() => copyButton.textContent = "复制开通码", 1200);
+      } catch {
+        statusBox.textContent = "复制失败，请长按或选中开通码复制。";
+      }
+    });
+  </script>
+</body>
+</html>
